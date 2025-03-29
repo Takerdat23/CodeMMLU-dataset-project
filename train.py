@@ -162,40 +162,31 @@ def get_conversation(components) -> List[Dict[str,str]] :
 
     total_prompt = (
         "[CONTEXT] \n"
-        "[CONTEXT] \n"
-        "question: {question} \n"
-        "Situation: {choices} \n"
-        "History chat informations above \n"
-        "[CURRENT CONTEXT] \n"
-        "Client's video: <video> \n"
+        
+        "You are given a coding question, a code snippet and a list of 4 choices"
+        
+        "Question: {question} \n"
+        "Choices: {choices} \n"
 
-        "[GUIDELINE] \n"
-        "Understand the Client's emotion, follow Client's point of view and intention, express sympathy for Client's negative situation or approval of Client's positive situation. The response should not imply negative emotions or triggers toward anyone or anything, such as disgust, resentment, discrimation, hatred, etc while supporting user well-being. Keep the information in the response truthful, avoid misinformation. The response should open and honest, foster understanding, connection, and provide comfort or support. The response should safeguard human autonomy, identity and data dignity. Ensuring AI behaviors guide emotional health responsibly, avoiding manipulation or harm. "
-        "You must follow the output format in [OUTPUT FORMAT] below, just print what is listed in [OUTPUT FORMAT], do not print anything more even your step thought. \n"
-        "The [CONTEXT] is history of current conversation between 'Client' and 'Therapist'. And [CURRENT CONTEXT] is the current 'Client' turn in the conversation \n"
-        "Now you are the 'Therapist' and you need to make an empathy response to the 'Client' based on the context. Let's think about it step by step: \n"
-        "Step 1: Describe and understanding the context and content of the conversation \n"
-        "Step 2: Predict the following and explain why for each components: \n"
-            "Client's emotion: Choose only one from (anger, sadness, disgust, depression, neutral, joy, fear). \n"
-            "Therapist's emotion: Choose only one from (anger, sadness, disgust, depression, neutral, joy, fear). \n"
-            "Therapist's strategy: Choose only one from (Open questions, Approval, Self-disclosure, Restatement, Interpretation, Advisement, Communication Skills, \n"
-            "Structuring the therapy, Guiding the pace and depth of the conversation, Others). \n"
-        "Step 3: You are the 'Therapist', think about how to reply to 'Client' in empathy. \n"
-        "Step 4: You need to consider the potential impact of your reply, you can express a different posotion or opinion, but you should not hurt Client's feelings \n"
+        "If the task is general_knowledge, you are given a conceptual software development question. Read the question and the choices, then choose the correct answer. \n"
+
+        "If the task is code_completion, you are given a question about code that is partially complete. Analyze the code, understand the missing part, and select the best completion. \n"
+
+        "If the task is fill_in_the_blank, you are given a problem description and an incomplete code snippet. Your job is to select the best option that fills in the blank to achieve the intended goal. \n"
+
+        "If the task is code_repair, you are given a buggy code snippet and a question asking how to fix it. Identify the error and select the best repair option. \n"
+
+        "If the task is defect_detection, you are given a code snippet and asked what behavior will most likely occur when it is executed. Analyze the code and choose the correct behavior. \n"
 
         "[OUTPUT FORMAT] \n"
-        "Client's emotion: Choose only one from (anger, sadness, disgust, depression, neutral, joy, fear). \n"
-        "Therapist's emotion: Choose only one from (anger, sadness, disgust, depression, neutral, joy, fear). \n"
-        "Therapist's strategy: Choose only one from (Open questions, Approval, Self-disclosure, Restatement, Interpretation, Advisement, Communication Skills, Structuring the therapy, Guiding the pace and depth of the conversation, Others). \n"
-        "Therapist's response: [Generated response text]"
+        "Answer: Choose only one from (A, B, C, D) according to the position of the answer in the choices ."
 
     ).format( 
         question=components["question"],
         choices=components["choices"],
     )
     conversation = [
-        {"role": "system", "content": ("You are an expert in emotional psychology. Your task is to analyze the client's emotional state, predict the therapist's emotional response,"
-                                        "determine the therapist's strategy, and generate an appropriate response based on the given inputs and historical context.")
+        {"role": "system", "content": ("You are a helpful coding assistant. You will be given one of several types of multiple-choice coding questions. Follow the instructions based on the task type.")
         },
         {"role": "user", "content": total_prompt},
         {"role": "assistant", "content": label}
