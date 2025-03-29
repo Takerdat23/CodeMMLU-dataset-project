@@ -2,7 +2,7 @@
 
 # Environment Variables
 ARG_WORLD_SIZE=${1:-1}
-ARG_NPROC_PER_NODE=${1:-1}
+ARG_NPROC_PER_NODE=${1:-2}
 ARG_MASTER_ADDR="127.0.0.1"
 ARG_MASTER_PORT=16666
 ARG_RANK=${3:-0}
@@ -22,7 +22,7 @@ echo "WORLD_SIZE: $WORLD_SIZE"
 echo "NPROC_PER_NODE: $NPROC_PER_NODE"
 
 # Training Arguments
-GLOBAL_BATCH_SIZE=1
+GLOBAL_BATCH_SIZE=2
 LOCAL_BATCH_SIZE=1
 GRADIENT_ACCUMULATION_STEPS=$[$GLOBAL_BATCH_SIZE/($WORLD_SIZE*$NPROC_PER_NODE*$LOCAL_BATCH_SIZE)]
 
@@ -38,7 +38,7 @@ torchrun --nnodes $WORLD_SIZE \
     --master_port=$MASTER_PORT \
     --node_rank $RANK \
     train.py \
-    --lora_enable True --lora_r 64 --lora_alpha 128 --mm_projector_lr 2e-5 --bits 4 \
+    --lora_enable True --lora_r 64 --lora_alpha 128 --bits 4 \
     --deepspeed scripts/zero3.json \
     --model_path Qwen/Qwen2.5-Coder-7B-Instruct \
     --data_path /workspace/CodeMMLU-dataset-project/data/b6_train_data.csv \
@@ -51,7 +51,7 @@ torchrun --nnodes $WORLD_SIZE \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEPS \
     --save_strategy "steps" \
-    --save_steps 500 \
+    --save_steps 2 \
     --save_total_limit 99 \
     --learning_rate 2e-5 \
     --weight_decay 0. \

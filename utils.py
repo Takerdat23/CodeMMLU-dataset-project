@@ -189,7 +189,6 @@ def tokenizer_token(prompt, tokenizer, return_tensors=None):
     # Convert to PyTorch tensor if requested
     if return_tensors == 'pt':
         return torch.tensor(input_ids, dtype=torch.long)
-
     return input_ids
 
 

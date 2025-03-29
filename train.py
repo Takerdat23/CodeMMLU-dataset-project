@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 
 import transformers
 from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
+from transformers import TrainerCallback
 
 import sys
 sys.path.append('./')
@@ -20,7 +21,7 @@ from trainer import (VideoLLaMA2Trainer,
     get_peft_state_maybe_zero_3, get_peft_state_non_lora_maybe_zero_3, 
     find_all_linear_names, safe_save_model_for_hf_trainer
 )
-
+from transformers import Trainer
 # NOTE: fast tokenizer warning issue: https://github.com/huggingface/transformers/issues/5486   
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -34,6 +35,13 @@ import torch
 from typing import List
 import uuid
 import pandas as pd
+
+
+IGNORE_INDEX = -100
+
+class ClearCacheCallback(TrainerCallback):
+    def on_step_end(self, args, state, control, **kwargs):
+        torch.cuda.empty_cache()
 
 def rank0_print(*args):
     if local_rank == 0:
@@ -107,8 +115,7 @@ class TrainingArguments(transformers.TrainingArguments):
 
 def preprocess(
     sources: Sequence[str],
-    tokenizer: transformers.PreTrainedTokenizer,
-    modal_token: str = None,
+    tokenizer: transformers.PreTrainedTokenizer
 ) -> Dict:
     # Apply prompt templates
     conversations = []
@@ -153,16 +160,14 @@ def get_conversation(components) -> List[Dict[str,str]] :
 
     label = (f"Answer: {components['answer']}")
 
-
     total_prompt = (
         "[CONTEXT] \n"
         "[CONTEXT] \n"
-        "question: {problem_type} \n"
-        "Situation: {situation} \n"
+        "question: {question} \n"
+        "Situation: {choices} \n"
         "History chat informations above \n"
         "[CURRENT CONTEXT] \n"
         "Client's video: <video> \n"
-        "Client utterance: {user_question} \n"
 
         "[GUIDELINE] \n"
         "Understand the Client's emotion, follow Client's point of view and intention, express sympathy for Client's negative situation or approval of Client's positive situation. The response should not imply negative emotions or triggers toward anyone or anything, such as disgust, resentment, discrimation, hatred, etc while supporting user well-being. Keep the information in the response truthful, avoid misinformation. The response should open and honest, foster understanding, connection, and provide comfort or support. The response should safeguard human autonomy, identity and data dignity. Ensuring AI behaviors guide emotional health responsibly, avoiding manipulation or harm. "
@@ -246,7 +251,7 @@ class LazySupervisedDataset(Dataset):
         }
         conversation = get_conversation(components)
      
-        data_dict = preprocess([conversation], self.tokenizer, modal_token='<video>')
+        data_dict = preprocess([conversation], self.tokenizer)
 
         if isinstance(i, int):
             data_dict = dict(input_ids=data_dict["input_ids"][0], labels=data_dict["labels"][0])
@@ -262,34 +267,24 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        # print(instances)
-        # instances is one batch
-        IGNORE_INDEX = -100
-  
-        total_prompt_ids = []
-        label_ids = []
-        for instance in instances:
-            total_prompt_ids.append(instance['total_prompt_ids']['input_ids'].view(-1))
-            label_ids.append(instance['label_ids']['input_ids'].view(-1))
-        
+        input_ids, labels = tuple([instance[key] for instance in instances]
+                                  for key in ("input_ids", "labels"))
         input_ids = torch.nn.utils.rnn.pad_sequence(
-            total_prompt_ids,
+            input_ids,
             batch_first=True,
             padding_value=self.tokenizer.pad_token_id)
-        labels = torch.nn.utils.rnn.pad_sequence(label_ids,
+        labels = torch.nn.utils.rnn.pad_sequence(labels,
                                                  batch_first=True,
                                                  padding_value=IGNORE_INDEX)
-        
         input_ids = input_ids[:, :self.tokenizer.model_max_length]
         labels = labels[:, :self.tokenizer.model_max_length]
-
         batch = dict(
             input_ids=input_ids,
             labels=labels,
             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
         )
-        
         return batch
+
 
 # TODO: create dataloader here
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
@@ -353,10 +348,8 @@ def train(attn_implementation=None):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.unk_token
 
-    model_args.hidden_size = config.hidden_size
-    # Parameters for mamba
 
-    model = transformers.LlamaForCausalLM.from_pretrained(
+    model = transformers.AutoModelForCausalLM.from_pretrained(
             model_args.model_path,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             do_sample=True,
