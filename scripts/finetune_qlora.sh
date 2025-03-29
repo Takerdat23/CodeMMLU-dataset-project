@@ -2,7 +2,7 @@
 
 # Environment Variables
 ARG_WORLD_SIZE=${1:-1}
-ARG_NPROC_PER_NODE=${1:-2}
+ARG_NPROC_PER_NODE=${1:-1}
 ARG_MASTER_ADDR="127.0.0.1"
 ARG_MASTER_PORT=16666
 ARG_RANK=${3:-0}
@@ -22,7 +22,7 @@ echo "WORLD_SIZE: $WORLD_SIZE"
 echo "NPROC_PER_NODE: $NPROC_PER_NODE"
 
 # Training Arguments
-GLOBAL_BATCH_SIZE=2
+GLOBAL_BATCH_SIZE=1
 LOCAL_BATCH_SIZE=1
 GRADIENT_ACCUMULATION_STEPS=$[$GLOBAL_BATCH_SIZE/($WORLD_SIZE*$NPROC_PER_NODE*$LOCAL_BATCH_SIZE)]
 
@@ -37,21 +37,11 @@ torchrun --nnodes $WORLD_SIZE \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
     --node_rank $RANK \
-    framework/train.py \
+    train.py \
     --lora_enable True --lora_r 64 --lora_alpha 128 --mm_projector_lr 2e-5 --bits 4 \
     --deepspeed scripts/zero3.json \
-    --model_type videollama2_qwen2 \
-    --model_path DAMO-NLP-SG/VideoLLaMA2.1-7B-AV \
-    --vision_tower google/siglip-so400m-patch14-384 \
-    --pretrain_mm_mlp_adapter_a DAMO-NLP-SG/VideoLLaMA2.1-7B-AV/resolve/main/mm_projector_a.bin \
-    --mm_projector_type stc_connector_v35 \
-    --data_path /workspace/SMES_Therapy_framework/data/mesc/train.jsonl \
-    --vid_folder /workspace/SMES_Therapy_framework/data/mesc/video_data/ \
-    --num_k_vid 5 \
-    --data_folder ${DATA_DIR}/videollava_sft/ \
-    --mm_vision_select_layer -2 \
-    --image_aspect_ratio pad \
-    --num_frames 8 \
+    --model_path Qwen/Qwen2.5-Coder-7B-Instruct \
+    --data_path /workspace/CodeMMLU-dataset-project/data/b6_train_data.csv \
     --bf16 True \
     --tf32 True \
     --fp16 False \
@@ -66,10 +56,9 @@ torchrun --nnodes $WORLD_SIZE \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
-    --max_grad_norm 1.0 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    --model_max_length 4096 \
+    --model_max_length 2048 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --report_to tensorboard \

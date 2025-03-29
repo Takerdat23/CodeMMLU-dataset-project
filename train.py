@@ -15,8 +15,8 @@ from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
 
 import sys
 sys.path.append('./')
-from .utils import tokenizer_token, process_video, process_image, process_audio_file
-from .trainer import (VideoLLaMA2Trainer,
+from utils import tokenizer_token
+from trainer import (VideoLLaMA2Trainer,
     get_peft_state_maybe_zero_3, get_peft_state_non_lora_maybe_zero_3, 
     find_all_linear_names, safe_save_model_for_hf_trainer
 )
@@ -56,7 +56,7 @@ def set_seed(seed=42):
 @dataclass
 class ModelArguments:
     # LLM Arguments
-    model_type: Optional[str] = field(default="SMES_llama", metadata={"help": "Model type selected in the list: " + ", ".join(VLLMs.keys())})
+    model_type: Optional[str] = field(default="SMES_llama", metadata={"help": "Model type selected in the list: "})
     model_path: Optional[str] = field(default="DAMO-NLP-SG/VideoLLaMA2.1-7B-AV", metadata={"help": "This is the videollama2 model path"})
     version: Optional[str] = field(default="v1", metadata={"help": "Version of the conversation template."})
     freeze_backbone: bool = field(default=False, metadata={"help": "Whether to freeze the LLM backbone."})
