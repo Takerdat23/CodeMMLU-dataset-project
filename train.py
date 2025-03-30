@@ -158,29 +158,14 @@ def preprocess(
 
 def get_conversation(components) -> List[Dict[str,str]] :
 
-    label = (f"Answer: {components['answer']}")
+    label = (f"Answer: {components['answer']}")      
 
     total_prompt = (
-        "[CONTEXT] \n"
-        
-        "You are given a coding question, a code snippet and a list of 4 choices"
-        
+        "You are a helpful coding assistant answering multiple-choice questions provied a code snipped and a list of choices. Return the answer as a single letter (A,B,C,D,E or G) without further explaination. \n"
+        "The following are multiple-choice questions (with answers) about software development. \n"
+        "Just examine carefully the code, analyze it and give me the answer choice. \n"
         "Question: {question} \n"
         "Choices: {choices} \n"
-
-        "If the task is general_knowledge, you are given a conceptual software development question. Read the question and the choices, then choose the correct answer. \n"
-
-        "If the task is code_completion, you are given a question about code that is partially complete. Analyze the code, understand the missing part, and select the best completion. \n"
-
-        "If the task is fill_in_the_blank, you are given a problem description and an incomplete code snippet. Your job is to select the best option that fills in the blank to achieve the intended goal. \n"
-
-        "If the task is code_repair, you are given a buggy code snippet and a question asking how to fix it. Identify the error and select the best repair option. \n"
-
-        "If the task is defect_detection, you are given a code snippet and asked what behavior will most likely occur when it is executed. Analyze the code and choose the correct behavior. \n"
-
-        "[OUTPUT FORMAT] \n"
-        "Answer: Choose only one from (A, B, C, D) according to the position of the answer in the choices ."
-
     ).format( 
         question=components["question"],
         choices=components["choices"],
@@ -193,6 +178,7 @@ def get_conversation(components) -> List[Dict[str,str]] :
     ]
 
     return conversation
+
 
 def load_data(file_path):
   data = []
@@ -335,9 +321,10 @@ def train(attn_implementation=None):
         padding_side="right",
         use_fast=True,
     )
-
+ 
+ 
     if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.unk_token
+        tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
 
 
     model = transformers.AutoModelForCausalLM.from_pretrained(

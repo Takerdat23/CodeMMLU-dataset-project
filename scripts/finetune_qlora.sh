@@ -40,8 +40,8 @@ torchrun --nnodes $WORLD_SIZE \
     train.py \
     --lora_enable True --lora_r 64 --lora_alpha 128 --bits 4 \
     --deepspeed scripts/zero3.json \
-    --model_path Qwen/Qwen2.5-Coder-7B-Instruct \
-    --data_path /workspace/CodeMMLU-dataset-project/data/b6_train_data.csv \
+    --model_path meta-llama/Llama-3.1-8B-Instruct \
+    --data_path data/b6_train_data.csv \
     --bf16 True \
     --tf32 True \
     --fp16 False \
